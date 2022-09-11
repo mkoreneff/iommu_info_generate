@@ -181,10 +181,10 @@ def main():
     else:
         print(
             f"request error: {r.reason}",
+            f"{r.text}",
             "please report this issue: https://github.com/mkoreneff/iommu_info_generate",
             sep=os.linesep
         )
-
 
 if __name__ == "__main__":
     main()
