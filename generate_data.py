@@ -22,13 +22,13 @@ def parse_hardware():
     hardware = {
         "board": {
             "name": "__unknown__",
-            "board_vendor": {"name": "_none_", "vendorid": "_none_"},
+            "board_vendor": {"name": "_none_", "vendorid": ""},
             "version": "__unknown__",
         },
         "bios": {
             "date": "",
             "release": "",
-            "bios_vendor": {"name": "_none_", "vendorid": "_none_"},
+            "bios_vendor": {"name": "_none_", "vendorid": ""},
             "version": "",
         },
         "groups": [],
@@ -136,21 +136,27 @@ def main():
         vendor_url = f"{URL}vendor/"
         lookup_url = f'{vendor_url}{hardware["board"]["board_vendor"]["name"]}'
         r = requests.get(lookup_url, headers=HEADERS)
-        try:
-            vendorid = json.loads(r.text)[0].get("vendorid")
-            hardware["board"]["board_vendor"]["vendorid"] = vendorid
-        except IndexError as e:
-            print(f'{e}: while looking up {hardware["board"]["board_vendor"]["name"]}')
-            hardware["board"]["board_vendor"]["vendorid"] = "ffff"
+        if r.ok:
+            if r.text:
+                vendorid = json.loads(r.text)[0].get("vendorid")
+                hardware["board"]["board_vendor"]["vendorid"] = vendorid
+            else:
+                print(f'error while looking up {hardware["board"]["board_vendor"]["name"]}')
+                hardware["board"]["board_vendor"]["vendorid"] = ""
+        else:
+            print(f"{r.reason}")
 
         lookup_url = f'{vendor_url}{hardware["bios"]["bios_vendor"]["name"]}'
         r = requests.get(lookup_url, headers=HEADERS)
-        try:
-            vendorid = json.loads(r.text)[0].get("vendorid")
-            hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
-        except IndexError as e:
-            print(f'{e}: while looking up {hardware["board"]["bios_vendor"]["name"]}')
-            hardware["bios"]["bios_vendor"]["vendorid"] = "ffff"
+        if r.ok:
+            if r.text:
+                vendorid = json.loads(r.text)[0].get("vendorid")
+                hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
+            else:
+                print(f'error while looking up {hardware["board"]["bios_vendor"]["name"]}')
+                hardware["bios"]["bios_vendor"]["vendorid"] = ""
+        else:
+            print(f"{r.reason}")
 
     else:
         with open(args.data, "r") as fh:
@@ -173,7 +179,11 @@ def main():
     if r.ok:
         print("Success, thanks for contributing to the project.")
     else:
-        print("Some error occured, please report this issue: https://github.com/mkoreneff/iommu_info_generate")
+        print(
+            f"request error: {r.reason}",
+            "please report this issue: https://github.com/mkoreneff/iommu_info_generate",
+            sep=os.linesep
+        )
 
 
 if __name__ == "__main__":
