@@ -136,13 +136,22 @@ def main():
         vendor_url = f"{URL}vendor/"
         lookup_url = f'{vendor_url}{hardware["board"]["board_vendor"]["name"]}'
         r = requests.get(lookup_url, headers=HEADERS)
-        vendorid = json.loads(r.text)[0].get("vendorid")
-        hardware["board"]["board_vendor"]["vendorid"] = vendorid
+        try:
+            vendorid = json.loads(r.text)[0].get("vendorid")
+            hardware["board"]["board_vendor"]["vendorid"] = vendorid
+        except IndexError as e:
+            print(f'{e}: while looking up {hardware["board"]["board_vendor"]["name"]}')
+            hardware["board"]["board_vendor"]["vendorid"] = "ffff"
 
         lookup_url = f'{vendor_url}{hardware["bios"]["bios_vendor"]["name"]}'
         r = requests.get(lookup_url, headers=HEADERS)
-        vendorid = json.loads(r.text)[0].get("vendorid")
-        hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
+        try:
+            vendorid = json.loads(r.text)[0].get("vendorid")
+            hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
+        except IndexError as e:
+            print(f'{e}: while looking up {hardware["board"]["bios_vendor"]["name"]}')
+            hardware["bios"]["bios_vendor"]["vendorid"] = "ffff"
+
     else:
         with open(args.data, "r") as fh:
             hardware = json.loads(fh.read())
