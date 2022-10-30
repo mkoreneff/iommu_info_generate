@@ -10,7 +10,7 @@ import subprocess
 
 import requests
 
-URL = "http://iommu.info/api/"
+URL = "https://iommu.info/api/"
 # TODO: {'Authorization' : '', 'Accept' : 'application/json', 'Content-Type' : 'application/json'}
 HEADERS = {"Accept": "application/json", "Content-Type": "application/json"}
 
