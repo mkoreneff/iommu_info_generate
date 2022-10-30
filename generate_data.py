@@ -200,7 +200,7 @@ def main():
        print(
            f"request error: {r.reason}",
            f"{r.text}",
-           "please report this issue: https://github.com/mkoreneff/iommu_info_generate",
+           "please report this issue: https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
            sep=os.linesep
        )
 
