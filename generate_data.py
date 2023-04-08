@@ -32,6 +32,13 @@ def parse_hardware():
             "bios_vendor": {"name": "_none_", "vendorid": ""},
             "version": "",
         },
+        "chassis": {
+            "type": "",
+        },
+        "product": {
+            "family": "",
+            "name": "",
+        },
         "groups": [],
     }
 
@@ -50,6 +57,13 @@ def parse_hardware():
                         hardware[device][key]["name"] = data
                         continue
                     hardware[device][key] = data
+
+    if hardware.get("chassis", {}).get("type", 0) in {"8", "9", "10"}:
+        hardware["board"]["name"] = (
+            f'{hardware["product"]["name"]} ' f'({hardware["product"]["family"]})'
+        )
+        hardware.pop("chassis")
+        hardware.pop("product")
 
     return hardware
 
@@ -139,7 +153,7 @@ def main():
         bios_vendor = hardware["bios"]["bios_vendor"]["name"]
         # lookup the vendorid
         vendor_url = f"{URL}vendor/"
-        lookup_url = f'{vendor_url}{board_vendor}'
+        lookup_url = f"{vendor_url}{board_vendor}"
         r = requests.get(lookup_url, headers=HEADERS)
         if r.ok:
             try:
@@ -147,16 +161,18 @@ def main():
                 hardware["board"]["board_vendor"]["vendorid"] = vendorid
             except IndexError as e:
                 print(
-                    f'{e} while trying to lookup Mainboard vendorid for: {board_vendor}',
+                    f"{e} while trying to lookup Mainboard vendorid for: {board_vendor}",
                     "Please report this problem and supply the output of",
                     "cat /sys/devices/virtual/dmi/id/board_vendor",
                     sep=os.linesep,
                 )
                 hardware["board"]["board_vendor"]["vendorid"] = ""
         else:
-            print(f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this.")
+            print(
+                f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this."
+            )
 
-        lookup_url = f'{vendor_url}{bios_vendor}'
+        lookup_url = f"{vendor_url}{bios_vendor}"
         r = requests.get(lookup_url, headers=HEADERS)
         if r.ok:
             try:
@@ -164,7 +180,7 @@ def main():
                 hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
             except IndexError as e:
                 print(
-                    f'{e} while trying to lookup Bios vendorid for: {bios_vendor}',
+                    f"{e} while trying to lookup Bios vendorid for: {bios_vendor}",
                     "Please report this problem and supply the output of",
                     "cat /sys/devices/virtual/dmi/id/bios_vendor",
                     sep=os.linesep,
@@ -172,7 +188,7 @@ def main():
                 hardware["bios"]["bios_vendor"]["vendorid"] = ""
         else:
             print(
-                f'Bios vendor ({bios_vendor}): {r.reason} in database. Please report this.'
+                f"Bios vendor ({bios_vendor}): {r.reason} in database. Please report this."
             )
 
     else:
@@ -195,14 +211,14 @@ def main():
     # POST the new data
     r = requests.post(URL, data=json_output, headers=HEADERS)
     if r.ok:
-       print("Success, thanks for contributing to the project.")
+        print("Success, thanks for contributing to the project.")
     else:
-       print(
-           f"request error: {r.reason}",
-           f"{r.text}",
-           "please report this issue: https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
-           sep=os.linesep
-       )
+        print(
+            f"request error: {r.reason}",
+            f"{r.text}",
+            "please report this issue: https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
+            sep=os.linesep,
+        )
 
 
 if __name__ == "__main__":
