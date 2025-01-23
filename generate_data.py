@@ -62,7 +62,7 @@ def parse_hardware():
                     hardware[device][key] = data
 
     if hardware.get("board", {}).get("version", "") == "":
-        log.debug("board version blank, setting '__unknown__'")
+        print("board version blank, setting '__unknown__'")
         hardware["board"]["version"] = "__unknown__"
 
     if hardware.get("chassis", {}).get("type", 0) in {"8", "9", "10"}:
