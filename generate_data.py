@@ -150,15 +150,15 @@ def lookup_vendor_id(vendor_name, lookup_type):
             vendorid = json.loads(r.text)[0].get("vendorid")
         except IndexError as e:
             print(
-                f"{e} while trying to lookup Mainboard vendorid for: {vendor_name}",
+                f"{e} while trying to lookup {lookup_type.title()} vendorid for: {vendor_name}",
                 "Please report this problem and supply the output of",
-                f"cat /sys/devices/virtual/dmi/id/{lookup_type}",
+                f"cat /sys/devices/virtual/dmi/id/{lookup_type}_vendor",
                 "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
                 sep=os.linesep,
             )
     else:
         print(
-            f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this",
+            f"{lookup_type.title()} vendor ({vendor_name}): {r.reason} in database. Please report this",
             "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
         )
     return vendorid
@@ -191,10 +191,10 @@ def main():
         bios_vendor = hardware["bios"]["bios_vendor"]["name"]
 
         hardware["board"]["board_vendor"]["vendorid"] = lookup_vendor_id(
-            board_vendor, "board_vendor"
+            board_vendor, "board"
         )
         hardware["bios"]["bios_vendor"]["vendorid"] = lookup_vendor_id(
-            bios_vendor, "bios_vendor"
+            bios_vendor, "bios"
         )
 
     else:
