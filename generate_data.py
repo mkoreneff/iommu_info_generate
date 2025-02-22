@@ -7,8 +7,11 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 
 import requests
+
+import pprint
 
 URL = "https://iommu.info/api/"
 # TODO: {'Authorization' : '', 'Accept' : 'application/json', 'Content-Type' : 'application/json'}
@@ -58,6 +61,10 @@ def parse_hardware():
                         continue
                     hardware[device][key] = data
 
+    if hardware.get("board", {}).get("version", "") == "":
+        print("board version blank, setting '__unknown__'")
+        hardware["board"]["version"] = "__unknown__"
+
     if hardware.get("chassis", {}).get("type", 0) in {"8", "9", "10"}:
         hardware["board"]["name"] = (
             f'{hardware["product"]["name"]} ' f'({hardware["product"]["family"]})'
@@ -69,7 +76,7 @@ def parse_hardware():
 
 
 def parse_lspci_output(output, structure):
-    regex_id = re.compile("\[[\s\w]{4}\]")
+    regex_id = re.compile(r"\[[\s\w]{4}\]")
     # slot and iommugroup in the main dict
     devices = {"devices": [], "iommugroup": None}
     # devices in their own structure
@@ -131,6 +138,32 @@ def parse_lspci_output(output, structure):
     return structure
 
 
+def lookup_vendor_id(vendor_name, lookup_type):
+    """Get pci-id vendorID"""
+    # lookup the vendorid
+    vendorid = ""
+    vendor_url = f"{URL}vendor/"
+    lookup_url = f"{vendor_url}{vendor_name}"
+    r = requests.get(lookup_url, headers=HEADERS)
+    if r.ok:
+        try:
+            vendorid = json.loads(r.text)[0].get("vendorid")
+        except IndexError as e:
+            print(
+                f"{e} while trying to lookup Mainboard vendorid for: {vendor_name}",
+                "Please report this problem and supply the output of",
+                f"cat /sys/devices/virtual/dmi/id/{lookup_type}",
+                "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
+                sep=os.linesep,
+            )
+    else:
+        print(
+            f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this",
+            "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
+        )
+    return vendorid
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -143,53 +176,26 @@ def main():
         "--data",
         help="accepts a json file containing the system information data",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="read local data, print to screen, don't upload to api",
+    )
     args = parser.parse_args()
-    # TODO: add errors and print at the end
-    errors = []
 
     if not args.data:
         hardware = parse_hardware()
+
+        # lookup vendor ids from the database
         board_vendor = hardware["board"]["board_vendor"]["name"]
         bios_vendor = hardware["bios"]["bios_vendor"]["name"]
-        # lookup the vendorid
-        vendor_url = f"{URL}vendor/"
-        lookup_url = f"{vendor_url}{board_vendor}"
-        r = requests.get(lookup_url, headers=HEADERS)
-        if r.ok:
-            try:
-                vendorid = json.loads(r.text)[0].get("vendorid")
-                hardware["board"]["board_vendor"]["vendorid"] = vendorid
-            except IndexError as e:
-                print(
-                    f"{e} while trying to lookup Mainboard vendorid for: {board_vendor}",
-                    "Please report this problem and supply the output of",
-                    "cat /sys/devices/virtual/dmi/id/board_vendor",
-                    sep=os.linesep,
-                )
-                hardware["board"]["board_vendor"]["vendorid"] = ""
-        else:
-            print(
-                f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this."
-            )
 
-        lookup_url = f"{vendor_url}{bios_vendor}"
-        r = requests.get(lookup_url, headers=HEADERS)
-        if r.ok:
-            try:
-                vendorid = json.loads(r.text)[0].get("vendorid")
-                hardware["bios"]["bios_vendor"]["vendorid"] = vendorid
-            except IndexError as e:
-                print(
-                    f"{e} while trying to lookup Bios vendorid for: {bios_vendor}",
-                    "Please report this problem and supply the output of",
-                    "cat /sys/devices/virtual/dmi/id/bios_vendor",
-                    sep=os.linesep,
-                )
-                hardware["bios"]["bios_vendor"]["vendorid"] = ""
-        else:
-            print(
-                f"Bios vendor ({bios_vendor}): {r.reason} in database. Please report this."
-            )
+        hardware["board"]["board_vendor"]["vendorid"] = lookup_vendor_id(
+            board_vendor, "board_vendor"
+        )
+        hardware["bios"]["bios_vendor"]["vendorid"] = lookup_vendor_id(
+            bios_vendor, "bios_vendor"
+        )
 
     else:
         with open(args.data, "r") as fh:
@@ -197,8 +203,7 @@ def main():
 
     if not args.file:
         # get the output
-        lspci = shutil.which("lspci")
-        cmdline = [f"{lspci}", "-nnvmm"]
+        cmdline = [shutil.which("lspci"), "-nnvmm"]
         stdout = subprocess.run(cmdline, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         groups = stdout.stdout
         output = parse_lspci_output(groups.decode(), hardware)
@@ -206,12 +211,20 @@ def main():
         with open(args.file, "r") as fh:
             output = parse_lspci_output(fh.read(), hardware)
 
+    if args.dry_run:
+        pprint.pprint(output)
+        sys.exit(0)
+
     json_output = json.dumps(output)
 
     # POST the new data
     r = requests.post(URL, data=json_output, headers=HEADERS)
     if r.ok:
-        print("Success, thanks for contributing to the project.")
+        print(
+            "Success, thanks for contributing to the project.",
+            f"To view your submission see https://iommu.info/mainboard/{r.json()['entry']}",
+            sep=os.linesep,
+        )
     else:
         print(
             f"request error: {r.reason}",
