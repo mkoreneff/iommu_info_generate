@@ -143,14 +143,14 @@ def lookup_vendor_id(vendor_name, lookup_type):
     # lookup the vendorid
     vendorid = ""
     vendor_url = f"{URL}vendor/"
-    lookup_url = f"{vendor_url}{vendor_name}"
-    r = requests.get(lookup_url, headers=HEADERS)
+    params = {"vendor": vendor_name}
+    r = requests.get(vendor_url, headers=HEADERS, params=params)
     if r.ok:
         try:
-            vendorid = json.loads(r.text)[0].get("vendorid")
+            vendorid = r.json().get("results")[0].get("vendorid")
         except IndexError as e:
             print(
-                f"{e} while trying to lookup Mainboard vendorid for: {vendor_name}",
+                f"{e} while trying to lookup vendorid for: {vendor_name}",
                 "Please report this problem and supply the output of",
                 f"cat /sys/devices/virtual/dmi/id/{lookup_type}",
                 "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
@@ -158,7 +158,7 @@ def lookup_vendor_id(vendor_name, lookup_type):
             )
     else:
         print(
-            f"Mainbaord vendor ({board_vendor}): {r.reason} in database. Please report this",
+            f"{lookup_type} ({vendor_name}): {r.reason} in database. Please report this",
             "https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
         )
     return vendorid
@@ -220,9 +220,11 @@ def main():
     # POST the new data
     r = requests.post(URL, data=json_output, headers=HEADERS)
     if r.ok:
+        vendor = r.json().get("board", {}).get("board_vendor", {}).get("name")
+        name = r.json().get("board", {}).get("name")
         print(
             "Success, thanks for contributing to the project.",
-            f"To view your submission see https://iommu.info/mainboard/{r.json()['entry']}",
+            f"To view your submission see https://iommu.info/mainboard/{vendor}/{name}",
             sep=os.linesep,
         )
     else:
