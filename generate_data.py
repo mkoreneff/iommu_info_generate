@@ -18,7 +18,7 @@ import requests
 
 import pprint
 
-URL = urllib.parse.urlparse("https://iommu.info/api")
+URL = urllib.parse.urlparse("https://iommu.info/api/")
 # TODO: {'Authorization' : '', 'Accept' : 'application/json', 'Content-Type' : 'application/json'}
 HEADERS: dict[str, str] = {
     "Accept": "application/json",
@@ -50,8 +50,6 @@ def _errors(problem: str, file: str | None = None, data: Any | None = None) -> N
 def _exit() -> None:
     """exit printing any errors if present"""
     if ERRORS:
-        # with open(DATAFILE.file.name) as fh:
-        #    submission_data = fh.readlines()
         print(
             "please report this on github: https://github.com/mkoreneff/iommu_info_generate/issues/new/choose",
             "copy and paste the text below into the issue",
